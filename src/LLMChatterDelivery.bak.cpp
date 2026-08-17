@@ -16,7 +16,6 @@
 #include "DatabaseEnv.h"
 #include "DBCStores.h"
 #include "Group.h"
-#include "Log.h"
 #include "Map.h"
 #include "ObjectAccessor.h"
 #include "Player.h"
@@ -588,68 +587,18 @@ void DeliverPendingMessagesImpl()
                 // may never have been enrolled if
                 // they spawned in the zone without
                 // a zone change.
-                bool generalDebug =
-                    sLLMChatterConfig
-                    && sLLMChatterConfig->IsDebugLog();
-
-                if (generalDebug)
-                {
-                    LOG_INFO(
-                        "module",
-                        "LLMChatter GENERAL-DIAG begin "
-                        "msg={} event={} bot={} guid={} "
-                        "botZone={} eventZone={} team={} "
-                        "bytes={}",
-                        messageId,
-                        eventId,
-                        botName,
-                        botGuid,
-                        bot->GetZoneId(),
-                        eventZoneId,
-                        static_cast<uint32>(
-                            bot->GetTeamId()),
-                        processedMessage.size());
-                }
-
                 EnsureBotInGeneralChannel(bot);
 
                 ChannelMgr* cMgr =
                     ChannelMgr::forTeam(
                         bot->GetTeamId());
-                if (!cMgr)
-                {
-                    if (generalDebug)
-                    {
-                        LOG_ERROR(
-                            "module",
-                            "LLMChatter GENERAL-DIAG "
-                            "msg={} no ChannelMgr for "
-                            "team={}",
-                            messageId,
-                            static_cast<uint32>(
-                                bot->GetTeamId()));
-                    }
-                }
-                else
+                if (cMgr)
                 {
                     uint32 zId = bot->GetZoneId();
                     AreaTableEntry const* ar =
                         sAreaTableStore
                             .LookupEntry(zId);
-                    if (!ar)
-                    {
-                        if (generalDebug)
-                        {
-                            LOG_ERROR(
-                                "module",
-                                "LLMChatter GENERAL-DIAG "
-                                "msg={} missing AreaTable "
-                                "entry zone={}",
-                                messageId,
-                                zId);
-                        }
-                    }
-                    else
+                    if (ar)
                     {
                         uint8 loc = sWorld
                             ->GetDefaultDbcLocale();
@@ -670,33 +619,7 @@ void DeliverPendingMessagesImpl()
                                     .LookupEntry(
                                         ChatChannelId
                                             ::GENERAL);
-                        if (!chEntry)
-                        {
-                            if (generalDebug)
-                            {
-                                LOG_ERROR(
-                                    "module",
-                                    "LLMChatter GENERAL-DIAG "
-                                    "msg={} missing General "
-                                    "ChatChannelsEntry",
-                                    messageId);
-                            }
-                        }
-                        else if (zName.empty())
-                        {
-                            if (generalDebug)
-                            {
-                                LOG_ERROR(
-                                    "module",
-                                    "LLMChatter GENERAL-DIAG "
-                                    "msg={} empty zone name "
-                                    "zone={} locale={}",
-                                    messageId,
-                                    zId,
-                                    static_cast<uint32>(loc));
-                            }
-                        }
-                        else
+                        if (chEntry && !zName.empty())
                         {
                             char buf[100];
                             std::snprintf(
@@ -706,116 +629,25 @@ void DeliverPendingMessagesImpl()
                                 zName.c_str());
 
                             std::string exactName(buf);
-                            bool exactChannelFound = false;
-                            bool playerSideMember = false;
-                            bool channelSideMember = false;
-
-                            if (generalDebug)
-                            {
-                                LOG_INFO(
-                                    "module",
-                                    "LLMChatter GENERAL-DIAG "
-                                    "msg={} zone='{}' exact='{}' "
-                                    "channels={}",
-                                    messageId,
-                                    zName,
-                                    exactName,
-                                    cMgr->GetChannels().size());
-                            }
-
                             for (auto const& [k, ch] :
                                 cMgr->GetChannels())
                             {
                                 if (!ch)
                                     continue;
-
-                                if (generalDebug
-                                    && ch->GetChannelId()
-                                        == ChatChannelId::GENERAL)
-                                {
-                                    LOG_INFO(
-                                        "module",
-                                        "LLMChatter GENERAL-DIAG "
-                                        "msg={} candidate='{}' "
-                                        "playerMember={} "
-                                        "channelMember={}",
-                                        messageId,
-                                        ch->GetName(),
-                                        bot->IsInChannel(ch)
-                                            ? 1 : 0,
-                                        ch->IsOn(bot->GetGUID())
-                                            ? 1 : 0);
-                                }
-
                                 if (ch->GetName()
                                     != exactName)
                                     continue;
-
-                                exactChannelFound = true;
-                                playerSideMember =
-                                    bot->IsInChannel(ch);
-                                channelSideMember =
-                                    ch->IsOn(
-                                        bot->GetGUID());
-
-                                if (generalDebug)
-                                {
-                                    LOG_INFO(
-                                        "module",
-                                        "LLMChatter GENERAL-DIAG "
-                                        "msg={} exact-found "
-                                        "playerMember={} "
-                                        "channelMember={}",
-                                        messageId,
-                                        playerSideMember ? 1 : 0,
-                                        channelSideMember ? 1 : 0);
-                                }
-
-                                if (!playerSideMember)
+                                if (!bot->IsInChannel(
+                                        ch))
                                     continue;
 
-                                // AzerothCore Channel::Say() performs
-                                // its own Channel::IsOn(guid) check.
-                                // Log both membership views so a stale
-                                // Player channel list vs Channel member
-                                // store is immediately visible.
                                 ch->Say(
                                     bot->GetGUID(),
                                     processedMessage
                                         .c_str(),
                                     LANG_UNIVERSAL);
                                 sent = true;
-
-                                if (generalDebug)
-                                {
-                                    LOG_INFO(
-                                        "module",
-                                        "LLMChatter GENERAL-DIAG "
-                                        "msg={} Say-called bot={} "
-                                        "channel='{}' "
-                                        "channelMemberBeforeSay={}",
-                                        messageId,
-                                        botName,
-                                        exactName,
-                                        channelSideMember ? 1 : 0);
-                                }
                                 break;
-                            }
-
-                            if (generalDebug && !sent)
-                            {
-                                LOG_ERROR(
-                                    "module",
-                                    "LLMChatter GENERAL-DIAG "
-                                    "msg={} NOT-SENT exactFound={} "
-                                    "playerMember={} "
-                                    "channelMember={} "
-                                    "exact='{}'",
-                                    messageId,
-                                    exactChannelFound ? 1 : 0,
-                                    playerSideMember ? 1 : 0,
-                                    channelSideMember ? 1 : 0,
-                                    exactName);
                             }
                         }
                     }
