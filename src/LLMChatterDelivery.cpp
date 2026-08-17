@@ -762,14 +762,30 @@ void DeliverPendingMessagesImpl()
                                         playerSideMember ? 1 : 0);
                                 }
 
-                                if (!playerSideMember)
-                                    continue;
+                                // Player::IsInChannel() only proves the
+                                // player's client-side/channel-id state
+                                // and can report true for multiple
+                                // zone-specific General channels.
+                                //
+                                // Force the bot through Channel's own
+                                // JoinChannel() path for the exact
+                                // zone-specific channel before Say().
+                                // JoinChannel() internally handles the
+                                // already-a-member case.
+                                ch->JoinChannel(bot, "");
 
-                                // Channel::Say() performs its own
-                                // internal membership check. The
-                                // Channel-side membership helper is
-                                // private, so this module logs only the
-                                // Player-side membership state.
+                                if (generalDebug)
+                                {
+                                    LOG_INFO(
+                                        "module",
+                                        "LLMChatter GENERAL-DIAG "
+                                        "msg={} JoinChannel-called "
+                                        "bot={} channel='{}'",
+                                        messageId,
+                                        botName,
+                                        exactName);
+                                }
+
                                 ch->Say(
                                     bot->GetGUID(),
                                     processedMessage
@@ -783,12 +799,10 @@ void DeliverPendingMessagesImpl()
                                         "module",
                                         "LLMChatter GENERAL-DIAG "
                                         "msg={} Say-called bot={} "
-                                        "channel='{}' "
-                                        "playerMemberBeforeSay={}",
+                                        "channel='{}'",
                                         messageId,
                                         botName,
-                                        exactName,
-                                        playerSideMember ? 1 : 0);
+                                        exactName);
                                 }
                                 break;
                             }
