@@ -708,7 +708,6 @@ void DeliverPendingMessagesImpl()
                             std::string exactName(buf);
                             bool exactChannelFound = false;
                             bool playerSideMember = false;
-                            bool channelSideMember = false;
 
                             if (generalDebug)
                             {
@@ -737,13 +736,10 @@ void DeliverPendingMessagesImpl()
                                         "module",
                                         "LLMChatter GENERAL-DIAG "
                                         "msg={} candidate='{}' "
-                                        "playerMember={} "
-                                        "channelMember={}",
+                                        "playerMember={}",
                                         messageId,
                                         ch->GetName(),
                                         bot->IsInChannel(ch)
-                                            ? 1 : 0,
-                                        ch->IsOn(bot->GetGUID())
                                             ? 1 : 0);
                                 }
 
@@ -754,9 +750,6 @@ void DeliverPendingMessagesImpl()
                                 exactChannelFound = true;
                                 playerSideMember =
                                     bot->IsInChannel(ch);
-                                channelSideMember =
-                                    ch->IsOn(
-                                        bot->GetGUID());
 
                                 if (generalDebug)
                                 {
@@ -764,21 +757,19 @@ void DeliverPendingMessagesImpl()
                                         "module",
                                         "LLMChatter GENERAL-DIAG "
                                         "msg={} exact-found "
-                                        "playerMember={} "
-                                        "channelMember={}",
+                                        "playerMember={}",
                                         messageId,
-                                        playerSideMember ? 1 : 0,
-                                        channelSideMember ? 1 : 0);
+                                        playerSideMember ? 1 : 0);
                                 }
 
                                 if (!playerSideMember)
                                     continue;
 
-                                // AzerothCore Channel::Say() performs
-                                // its own Channel::IsOn(guid) check.
-                                // Log both membership views so a stale
-                                // Player channel list vs Channel member
-                                // store is immediately visible.
+                                // Channel::Say() performs its own
+                                // internal membership check. The
+                                // Channel-side membership helper is
+                                // private, so this module logs only the
+                                // Player-side membership state.
                                 ch->Say(
                                     bot->GetGUID(),
                                     processedMessage
