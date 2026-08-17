@@ -769,7 +769,7 @@ public:
               "LLMChatterGuildPlayerScript",
               {PLAYERHOOK_ON_LOGIN,
                PLAYERHOOK_ON_LOGOUT,
-               PLAYERHOOK_ON_BEFORE_SEND_CHAT_MESSAGE})
+               PLAYERHOOK_CAN_PLAYER_USE_GUILD_CHAT})
     {
     }
 
@@ -821,14 +821,20 @@ public:
             player->GetGUID().GetCounter());
     }
 
-    void OnPlayerBeforeSendChatMessage(
+    bool OnPlayerCanUseChat(
         Player* player,
-        uint32& type,
-        uint32& language,
-        std::string& message) override
+        uint32 type,
+        uint32 language,
+        std::string& message,
+        Guild* /*guild*/) override
     {
         HandleGuildPlayerMessage(
-            player, type, language, message);
+            player,
+            type,
+            language,
+            message);
+
+        return true;
     }
 };
 }

@@ -1216,9 +1216,19 @@ public:
         Player* player, uint32 type, uint32 lang,
         std::string& msg, Group* /*group*/) override
     {
+        // Hidden MBOT/addon protocol messages are handled
+        // separately and must not be treated as player speech.
         if (TryHandleMultiBotCompatChat(
                 player, type, lang, msg))
+        {
             return false;
+        }
+
+        // Normal Party / Party Leader messages should be
+        // processed through AzerothCore's dedicated Group
+        // chat hook.
+        HandleGroupPlayerBeforeSendChatMessageImpl(
+            player, type, lang, msg);
 
         return true;
     }
@@ -1274,6 +1284,18 @@ public:
         uint32& lang,
         std::string& msg) override
     {
+        // Party chat is handled by the dedicated Group*
+        // OnPlayerCanUseChat hook above. Do not process it
+        // again through the generic hook.
+        if (type == CHAT_MSG_PARTY
+            || type == CHAT_MSG_PARTY_LEADER)
+        {
+            return;
+        }
+
+        // Keep the generic hook for proximity /say handling
+        // and any other non-group chatter handled by this
+        // function.
         HandleGroupPlayerBeforeSendChatMessageImpl(
             player, type, lang, msg);
     }
