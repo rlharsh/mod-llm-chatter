@@ -784,11 +784,11 @@ void DeliverPendingMessagesImpl()
                                         "LLMChatter GENERAL-DIAG "
                                         "msg={} Say-called bot={} "
                                         "channel='{}' "
-                                        "channelMemberBeforeSay={}",
+                                        "playerMemberBeforeSay={}",
                                         messageId,
                                         botName,
                                         exactName,
-                                        channelSideMember ? 1 : 0);
+                                        playerSideMember ? 1 : 0);
                                 }
                                 break;
                             }
@@ -800,12 +800,10 @@ void DeliverPendingMessagesImpl()
                                     "LLMChatter GENERAL-DIAG "
                                     "msg={} NOT-SENT exactFound={} "
                                     "playerMember={} "
-                                    "channelMember={} "
                                     "exact='{}'",
                                     messageId,
                                     exactChannelFound ? 1 : 0,
                                     playerSideMember ? 1 : 0,
-                                    channelSideMember ? 1 : 0,
                                     exactName);
                             }
                         }
