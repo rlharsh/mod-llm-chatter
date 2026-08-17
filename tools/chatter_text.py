@@ -136,9 +136,11 @@ def parse_single_response(response: str) -> dict:
             'action': None,
         }
 
-    # Last resort: treat as plain text, but strip any
-    # leaked JSON scaffolding so users never see raw
-    # `{ "message": "...` in chat.
+    # Last resort: treat genuinely plain text as the
+    # message. If the response *looks* like JSON but is
+    # too truncated/malformed to yield a message value,
+    # reject it instead of leaking scaffolding such as
+    # `{\"message` into in-game chat.
     msg = cleaned.strip().strip('"')
     if msg.startswith('{'):
         m = re.search(
@@ -146,6 +148,20 @@ def parse_single_response(response: str) -> dict:
         )
         if m:
             msg = m.group(1).strip().strip('"').rstrip(',}')
+        else:
+            msg = ''
+
+    # Extra guard for partial JSON fragments that lost
+    # the opening brace or otherwise survived the normal
+    # parser paths. These are never useful player-facing
+    # chat messages.
+    if re.match(
+        r'^\s*"?message"?\s*(?::|$)',
+        msg,
+        flags=re.IGNORECASE,
+    ):
+        msg = ''
+
     return {
         'message': msg,
         'emote': None,
